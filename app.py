@@ -14,13 +14,14 @@ import tensorflow as tf
 from flask import Flask, request, render_template, redirect, url_for, flash
 from tensorflow.keras.models import load_model
 from flask_basicauth import BasicAuth
+from credentials import ipCred, usernameCred, passwordCred, databaseCred
 
 # ========== Configure Your Database ==========
 db_config = {
-    'host': '192.168.0.17',
-    'user': 'admin',
-    'password': 'spotify',
-    'database': 'Stocks_DB'
+    'host': ipCred,
+    'user': usernameCred,
+    'password': passwordCred,
+    'database': databaseCred
 }
 
 app = Flask(__name__)
