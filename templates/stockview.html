@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stock View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* Basic Reset & Global Styles */
+    * {
+      box-sizing: border-box;
+    }
+    body, h1, p, form, nav {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      background: #fff;
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      animation: fadeIn 1s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    nav {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      text-decoration: none;
+      color: #3498db;
+      margin: 0 10px;
+      font-weight: bold;
+    }
+    nav a:hover {
+      color: #2980b9;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2c3e50;
+      font-size: 2.5em;
+    }
+    form {
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    form input[type="text"] {
+      padding: 10px 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1em;
+      margin-right: 10px;
+      width: 200px;
+    }
+    form button {
+      padding: 10px 20px;
+      background: #3498db;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    form button:hover {
+      background: #2980b9;
+      transform: scale(1.02);
+    }
+    .error {
+      background: #ffe6e6;
+      border: 1px solid #ff5c5c;
+      color: #a94442;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1em;
+    }
+    .graph {
+      text-align: center;
+    }
+    .graph img {
+      width: 100%;
+      max-height: 500px;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/stockview">Stock View</a>
+    </nav>
+    <h1>Stock View</h1>
+    
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <!-- Form to enter ticker and number of days -->
+    <form method="POST" action="/stockview">
+      <input type="text" name="ticker" placeholder="Enter ticker (e.g., AAPL)" required />
+      <input type="text" name="days" placeholder="Days (e.g., 30)" required />
+      <button type="submit">View Stock Data</button>
+    </form>
+    
+    {% if ticker and plot_png %}
+    <div class="graph">
+      <h2>{{ ticker }} Stock Data (Last {{ days }} Days)</h2>
+      <img src="data:image/png;base64,{{ plot_png }}" alt="Historical Data Plot">
+    </div>
+    {% endif %}
+    
+    <p style="text-align: center; margin-top: 20px;"><a href="/">Back to Home</a></p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stock Price Prediction</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* Basic Reset & Global Styles */
+    * {
+      box-sizing: border-box;
+    }
+    body, h1, p, form, nav {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      color: #333;
+      position: relative;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    /* Admin Button at top right */
+    .admin-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+    .admin-button a {
+      text-decoration: none;
+      background: #3498db;
+      color: #fff;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    .admin-button a:hover {
+      background: #2980b9;
+    }
+    .container {
+      background: #fff;
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      animation: fadeIn 1s ease-in-out;
+      margin: 60px auto 0;  /* Add margin-top so the container doesn't overlap the admin button */
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    nav {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      text-decoration: none;
+      color: #3498db;
+      margin: 0 10px;
+      font-weight: bold;
+    }
+    nav a:hover {
+      color: #2980b9;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+      font-size: 2.5em;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 30px;
+      justify-content: space-between;
+    }
+    form label {
+      flex: 1 1 100%;
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-size: 1.1em;
+    }
+    form input[type="text"] {
+      flex: 1 1 48%;
+      padding: 12px 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1em;
+      transition: border 0.3s;
+    }
+    form input[type="text"]:focus {
+      border-color: #3498db;
+      outline: none;
+    }
+    form button {
+      flex: 1 1 100%;
+      padding: 15px;
+      background: #3498db;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    form button:hover {
+      background: #2980b9;
+      transform: scale(1.02);
+    }
+    .error {
+      background: #ffe6e6;
+      border: 1px solid #ff5c5c;
+      color: #a94442;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      font-size: 1em;
+    }
+    .result {
+      background: #ecf0f1;
+      padding: 30px;
+      border-radius: 10px;
+      margin-top: 30px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .result p {
+      font-size: 1.3em;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+    .result img {
+      width: 100%;
+      max-height: 500px;
+      object-fit: contain;
+      border-radius: 10px;
+      margin-top: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    /* Spinner styles */
+    .spinner {
+      display: none;
+      margin: 20px auto;
+      border: 8px solid #f3f3f3;
+      border-top: 8px solid #3498db;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @media (max-width: 480px) {
+      form input[type="text"] {
+        flex: 1 1 100%;
+      }
+      h1 {
+        font-size: 2em;
+      }
+      .result p {
+        font-size: 1.1em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-button">
+    <a href="/admin">Admin</a>
+  </div>
+  <div class="container">
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/stockview">Stock View</a>
+    </nav>
+    <h1>Stock Price Prediction</h1>
+    
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <form id="predictForm" method="POST">
+      <label for="ticker">Ticker:</label>
+      <input type="text" name="ticker" id="ticker" placeholder="e.g., AAPL" required />
+      
+      <label for="date">Target Date (YYYY-MM-DD):</label>
+      <input type="text" name="date" id="date" placeholder="e.g., 2025-03-01" required />
+
+      <button type="submit">Predict</button>
+    </form>
+    
+    <!-- Spinner to show while the model is running -->
+    <div class="spinner" id="spinner"></div>
+    
+    <div id="resultArea">
+      {% if predicted_price %}
+      <div class="result">
+        <p>
+          Predicted closing price for <strong>{{ ticker }}</strong> on 
+          <strong>{{ date_str }}</strong>: 
+          <span style="color: #3498db;">${{ "%.2f"|format(predicted_price) }}</span>
+        </p>
+        {% if actual_price is not none %}
+        <p>
+          Actual closing price for <strong>{{ ticker }}</strong> on 
+          <strong>{{ date_str }}</strong>: 
+          <span style="color: #27ae60;">${{ "%.2f"|format(actual_price) }}</span>
+        </p>
+        {% endif %}
+        {% if actual_msg %}
+          <p class="error">{{ actual_msg }}</p>
+        {% endif %}
+        <img src="data:image/png;base64,{{ plot_png }}" alt="Stock Price Prediction Plot" />
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  <script>
+    // Handle AJAX form submission to show a spinner during processing.
+    const form = document.getElementById('predictForm');
+    const spinner = document.getElementById('spinner');
+    const resultArea = document.getElementById('resultArea');
+
+    form.addEventListener('submit', function(event) {
+      event.preventDefault(); // Prevent default form submission
+      
+      // Show the spinner
+      spinner.style.display = 'block';
+      
+      // Clear any previous results
+      resultArea.innerHTML = '';
+      
+      // Prepare form data
+      const formData = new FormData(form);
+      
+      // Submit form data using Fetch API
+      fetch("/", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.text())
+      .then(html => {
+        // Hide the spinner once the request is complete
+        spinner.style.display = 'none';
+        // Replace the current document content with the new HTML
+        document.open();
+        document.write(html);
+        document.close();
+      })
+      .catch(error => {
+        spinner.style.display = 'none';
+        console.error("Error:", error);
+      });
+    });
+  </script>
+</body>
+</html>
