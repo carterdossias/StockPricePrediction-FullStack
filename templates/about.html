@@ -4,73 +4,35 @@
   <meta charset="UTF-8" />
   <title>About Stock Price Prediction</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Link to external CSS file -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
-    /* Basic Reset & Global Styles */
-    * {
-      box-sizing: border-box;
-    }
-    body, h1, p, nav {
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-      color: #333;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+    /* Additional styling specific to the about page */
+    .about-content {
+      text-align: center;
       padding: 20px;
-    }
-    .container {
-      background: #fff;
-      max-width: 800px;
-      width: 100%;
-      padding: 40px;
-      border-radius: 10px;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-      animation: fadeIn 1s ease-in-out;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    nav {
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    nav a {
-      text-decoration: none;
-      color: #3498db;
-      margin: 0 10px;
-      font-weight: bold;
-    }
-    nav a:hover {
-      color: #2980b9;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #2c3e50;
-      font-size: 2.5em;
-    }
-    p {
       font-size: 1.2em;
       line-height: 1.6;
-      margin-bottom: 15px;
     }
-    a.button {
+    .about-header {
+      font-size: 2.8em;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    .about-section {
+      margin-bottom: 25px;
+    }
+    .button {
       display: inline-block;
       padding: 10px 20px;
       background: #3498db;
       color: #fff;
       text-decoration: none;
       border-radius: 5px;
-      margin-top: 20px;
       transition: background 0.3s;
+      margin-top: 20px;
     }
-    a.button:hover {
+    .button:hover {
       background: #2980b9;
     }
   </style>
@@ -80,21 +42,33 @@
     <nav>
       <a href="/">Home</a>
       <a href="/about">About</a>
+      <a href="/stockview">Stock View</a>
+      <a href="/admin">Admin</a>
     </nav>
-    <h1>About This App</h1>
-    <p>
-      This Stock Price Prediction application leverages machine learning techniques to forecast future stock prices.
-      It uses historical stock data (open, high, low, close, volume) along with sentiment analysis from news headlines
-      to generate predictions.
-    </p>
-    <p>
-      The app is built using Python, Flask, TensorFlow/Keras, and various data science libraries. It demonstrates how AI 
-      can be integrated into financial analysis and forecasting.
-    </p>
-    <p>
-      For more information about the project, please refer to our documentation or contact the development team.
-    </p>
-    <a class="button" href="/">Back to Home</a>
+    <div class="about-content">
+      <h1 class="about-header">About This Full Stack App</h1>
+      <div class="about-section">
+        <p>
+          Our Stock Price Prediction App uses LSTM ML algorithms 
+          Our Stock Price Prediction application leverages cutting-edge machine learning techniques to forecast future stock prices.
+          By integrating historical stock data with real-time sentiment analysis from news articles, the app provides a comprehensive
+          view of market trends.
+        </p>
+      </div>
+      <div class="about-section">
+        <p>
+          Built with Python, Flask, TensorFlow/Keras, and various data science libraries, the platform demonstrates how AI can be
+          seamlessly integrated into financial analysis and forecasting.
+        </p>
+      </div>
+      <div class="about-section">
+        <p>
+          Data is automatically imported from Yahoo Finance and enriched with sentiment scores derived from news, offering an innovative
+          approach to visualizing and predicting stock performance.
+        </p>
+      </div>
+      <a class="button" href="/">Back to Home</a>
+    </div>
   </div>
 </body>
 </html>

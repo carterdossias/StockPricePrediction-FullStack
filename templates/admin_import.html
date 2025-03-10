@@ -4,71 +4,7 @@
   <meta charset="UTF-8">
   <title>Import Ticker Data</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    /* Basic styling for the admin import page */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      width: 80%;
-      margin: 40px auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    form {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    form input[type="text"] {
-      padding: 10px;
-      width: 200px;
-      margin-right: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    form button {
-      padding: 10px 20px;
-      background: #3498db;
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 1em;
-      cursor: pointer;
-    }
-    form button:hover {
-      background: #2980b9;
-    }
-    .message {
-      text-align: center;
-      font-size: 1.2em;
-      margin-top: 20px;
-      color: green;
-    }
-    .error {
-      text-align: center;
-      font-size: 1.2em;
-      margin-top: 20px;
-      color: red;
-    }
-    nav a {
-      margin: 0 10px;
-      text-decoration: none;
-      color: #3498db;
-      font-weight: bold;
-    }
-    nav a:hover {
-      color: #2980b9;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
   <div class="container">
