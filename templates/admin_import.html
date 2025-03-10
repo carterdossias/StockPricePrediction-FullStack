@@ -26,6 +26,8 @@
     <h1>Import New Ticker Data</h1>
     <div class="info">
       <p>This process will import both historical stock data and related news data for the specified ticker.</p>
+      <p>Note that this should only be used for adding <b>NEW</b> stocks, not updating.</p>
+      <p>Currently it does <b>NOT</b> automatically run sentiment analysis.</p>
     </div>
     <form method="POST" action="{{ url_for('import_ticker') }}">
       <input type="text" name="ticker" placeholder="Enter Ticker (e.g., MSFT)" required>
