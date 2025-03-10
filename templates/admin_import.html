@@ -5,6 +5,15 @@
   <title>Import Ticker Data</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* Additional styling specific to the admin import page, if needed */
+    .info {
+      text-align: center;
+      font-size: 1.1em;
+      margin-bottom: 20px;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -15,6 +24,9 @@
       <a href="/admin">Admin</a>
     </nav>
     <h1>Import New Ticker Data</h1>
+    <div class="info">
+      <p>This process will import both historical stock data and related news data for the specified ticker.</p>
+    </div>
     <form method="POST" action="{{ url_for('import_ticker') }}">
       <input type="text" name="ticker" placeholder="Enter Ticker (e.g., MSFT)" required>
       <button type="submit">Import Data</button>

@@ -11,25 +11,31 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import yfinance as yf
 import tensorflow as tf
-from flask import Flask, request, render_template, redirect, url_for, flash
+from flask import Flask, request, render_template, redirect, url_for, flash, Response, stream_with_context
 from tensorflow.keras.models import load_model
 from flask_basicauth import BasicAuth
 from credentials import ipCred, usernameCred, passwordCred, databaseCred
+from ticker_import import create_new_ticker_table, import_news_data
+import time
+import threading
+import queue
 
-# ========== Configure Your Database ==========
+
+# = = = = = = = = = = = Here we configure the connection to the DB = = = = = = = = = = = 
 db_config = {
     'host': ipCred,
     'user': usernameCred,
     'password': passwordCred,
     'database': databaseCred
 }
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 app = Flask(__name__)
-app.secret_key = "replace_with_a_secret_key"
+app.secret_key = "replace_with_a_secret_key" # will replace in the future
 
 # Configure Basic Auth for admin routes
 app.config['BASIC_AUTH_USERNAME'] = 'admin'
-app.config['BASIC_AUTH_PASSWORD'] = 'admin'  # change to a secure password
+app.config['BASIC_AUTH_PASSWORD'] = 'admin'  # will change to a secure password
 app.config['BASIC_AUTH_FORCE'] = False  # only force auth on specific routes
 basic_auth = BasicAuth(app)
 
@@ -132,16 +138,55 @@ def import_ticker():
     if request.method == 'POST':
         ticker = request.form.get('ticker', '').upper().strip()
         if ticker:
-            try:
-                # Import the function from ticker_import.py
-                from ticker_import import create_new_ticker_table
-                create_new_ticker_table(ticker)
-                message = f"Successfully imported data for {ticker}."
-            except Exception as e:
-                message = f"Error importing data for {ticker}: {e}"
+            # Start a background thread to do the import
+            def import_job(ticker_symbol):
+                try:
+                    from ticker_import import create_new_ticker_table, import_news_data
+                    log_queue.put(f"Starting import for {ticker_symbol}...")
+                    
+                    # 1) Import stock data
+                    create_new_ticker_table(ticker_symbol, log_queue=log_queue)
+                    
+                    # 2) Import news data
+                    import_news_data(ticker_symbol, log_queue=log_queue)
+                    
+                    log_queue.put(f"Finished import for {ticker_symbol}.")
+                except Exception as e:
+                    log_queue.put(f"Error importing data for {ticker_symbol}: {e}")
+                finally:
+                    # Signal SSE stream to stop
+                    log_queue.put(None)
+
+            threading.Thread(target=import_job, args=(ticker,)).start()
+            
+            # We can display a page that shows the SSE log viewer
+            return render_template('admin_import_running.html', ticker=ticker)
         else:
             message = "Please enter a ticker symbol."
     return render_template('admin_import.html', message=message)
+
+
+log_queue = queue.Queue()  # A thread-safe queue to hold log lines
+
+def sse_stream():
+    """Generator function that yields log messages from log_queue."""
+    while True:
+        # Blocks until a log message is available
+        line = log_queue.get()
+        # If we receive a sentinel indicating the import is done, break
+        if line is None:
+            break
+        # SSE format: "data: <message>\n\n"
+        yield f"data: {line}\n\n"
+
+@app.route('/admin/import_logs')
+@basic_auth.required
+def import_logs():
+    """
+    SSE endpoint that streams log messages from log_queue.
+    The client can connect via EventSource to get real-time updates.
+    """
+    return Response(stream_with_context(sse_stream()), mimetype='text/event-stream')
 
 # ---------- Other Routes (index, stockview, about) ----------
 @app.route('/about')

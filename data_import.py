@@ -1,19 +1,19 @@
-### KEEP ME UP TO DATE WITH MASTER DATA PULL 
-## THIS SCRIPT IS WHAT THE ADMIN PAGE USES TO IMPORT TICKER DATA INTO THE DATABASE
-## THIS SCRIPT IS NOT USED IN THE MAIN APP
-## KEEP UP TO DATE WITH MASTER DATA PULL!!!!!!!
-
-from credentials import ipCred, usernameCred, passwordCred, databaseCred, API_KEYcred
-
-import yfinance as yf
-import mysql.connector
-import pandas as pd
-import numpy as np
-import datetime
 import requests
+import datetime
 import time
+import pandas as pd
+import mysql.connector
+import numpy as np
 
-# ----------------- Helper Function -----------------
+from credentials import (
+    API_KEYcred,
+    ipCred,
+    usernameCred,
+    passwordCred,
+    databaseCred
+)
+
+# =================== Stock Data Import Function ===================
 
 def safe_float(value):
     """Convert a value to float if not NaN, otherwise return None."""
@@ -21,26 +21,15 @@ def safe_float(value):
         return None
     return float(value)
 
-# ----------------- Stock Data Import -----------------
-
-def create_new_ticker_table(
-    ticker_symbol,
-    server=ipCred,
-    username=usernameCred,
-    password=passwordCred,
-    database=databaseCred,
-    log_queue=None
-):
+def create_new_ticker_table(ticker_symbol, server=ipCred, username=usernameCred, password=passwordCred, database=databaseCred):
     """
     Fetch historical stock data for a ticker via yfinance,
     create a table (if it doesn't exist) named <TICKER>_data,
     and insert the data using upsert functionality.
     """
     ticker_symbol = ticker_symbol.upper().strip()
-    if log_queue:
-        log_queue.put(f"Importing stock data for {ticker_symbol}...")
-
-    # Connect to MySQL
+    
+    # Establish connection to MySQL
     conn = mysql.connector.connect(
         host=server,
         user=username,
@@ -48,21 +37,22 @@ def create_new_ticker_table(
         database=database
     )
     cursor = conn.cursor()
-
+    
     # Fetch historical stock data using yfinance
+    import yfinance as yf
     stock = yf.Ticker(ticker_symbol)
     hist = stock.history(period="max")
-
-    # Localize the index to UTC to avoid DST/timezone issues
+    
+    # Localize the index to UTC
     if hist.index.tzinfo is None:
         hist.index = hist.index.tz_localize('UTC', nonexistent='shift_forward', ambiguous='NaT')
     else:
         hist.index = hist.index.tz_convert('UTC')
-
-    # Create table name
+    
+    # Define table name based on ticker symbol
     table_name = f"{ticker_symbol}_data"
-
-    # Create table if not exists
+    
+    # Create table if it doesn't exist
     create_table_query = f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
         date DATE PRIMARY KEY,
@@ -75,8 +65,8 @@ def create_new_ticker_table(
     """
     cursor.execute(create_table_query)
     conn.commit()
-
-    # Insert data with upsert
+    
+    # Insert data with upsert functionality
     insert_query = f"""
     INSERT INTO {table_name} (date, open, high, low, close, volume)
     VALUES (%s, %s, %s, %s, %s, %s)
@@ -87,7 +77,7 @@ def create_new_ticker_table(
         close = VALUES(close),
         volume = VALUES(volume)
     """
-
+    
     for index, row in hist.iterrows():
         data_tuple = (
             index.date(),
@@ -98,43 +88,31 @@ def create_new_ticker_table(
             int(row.get('Volume')) if not pd.isnull(row.get('Volume')) else None
         )
         cursor.execute(insert_query, data_tuple)
-
+    
     conn.commit()
     cursor.close()
     conn.close()
+    print(f"Stock data imported successfully for {ticker_symbol}.")
 
-    if log_queue:
-        log_queue.put(f"Stock data imported successfully for {ticker_symbol}.")
-    else:
-        print(f"Stock data imported successfully for {ticker_symbol}.")
+# =================== News Data Import Function ===================
 
-
-# ----------------- News Data Import -----------------
-
-def import_news_data(
-    ticker,
-    start_date=datetime.date(2024, 1, 1),
-    end_date=datetime.date.today(),
-    log_queue=None
-):
+def import_news_data(ticker, start_date=datetime.date(2024, 1, 1), end_date=datetime.date.today()):
     """
     Fetch news data from the FINNUB API for the given ticker within the given date range,
     then insert the news articles into a table named <TICKER>_news in the database.
     """
     ticker = ticker.upper().strip()
-    if log_queue:
-        log_queue.put(f"Importing news data for {ticker} from {start_date} to {end_date}...")
-
     API_KEY = API_KEYcred
     BASE_URL = "https://finnhub.io/api/v1/company-news"
-
+    
+    # Database Configuration
     db_config = {
         'host': ipCred,
         'user': usernameCred,
         'password': passwordCred,
         'database': databaseCred
     }
-
+    
     all_news = []
     current_start = start_date
     MAX_RETRIES = 5
@@ -150,13 +128,8 @@ def import_news_data(
             "to": current_end.strftime("%Y-%m-%d"),
             "token": API_KEY
         }
-
-        msg = f"Fetching news for {ticker} from {params['from']} to {params['to']}"
-        if log_queue:
-            log_queue.put(msg)
-        else:
-            print(msg)
-
+        
+        print(f"Fetching news for {ticker} from {params['from']} to {params['to']}")
         retries = 0
         success = False
         while not success and retries < MAX_RETRIES:
@@ -169,35 +142,24 @@ def import_news_data(
             elif response.status_code == 429:
                 retries += 1
                 wait_time = 2 ** retries
-                msg = f"Rate limit reached. Retrying in {wait_time} seconds (attempt {retries}/{MAX_RETRIES})"
-                if log_queue:
-                    log_queue.put(msg)
-                else:
-                    print(msg)
+                print(f"Rate limit reached. Retrying in {wait_time} seconds (attempt {retries}/{MAX_RETRIES})")
                 time.sleep(wait_time)
             else:
-                err_msg = f"Error: {response.status_code} for range {params['from']} to {params['to']}"
-                if log_queue:
-                    log_queue.put(err_msg)
-                else:
-                    print(err_msg)
+                print(f"Error: {response.status_code} for range {params['from']} to {params['to']}")
                 success = True  # exit loop on non-429 errors
-
+        
         current_start = current_end + datetime.timedelta(days=1)
         time.sleep(1)
 
     if not all_news:
-        no_data_msg = f"No news data found for {ticker}."
-        if log_queue:
-            log_queue.put(no_data_msg)
-        else:
-            print(no_data_msg)
+        print(f"No news data found for {ticker}.")
         return
 
     # Convert collected news to a DataFrame
     df = pd.DataFrame(all_news)
-
-    def safe_ts(ts):
+    
+    # Helper to safely convert Unix timestamps
+    def safe_convert(ts):
         try:
             ts_val = int(ts)
             if ts_val <= 0:
@@ -207,12 +169,12 @@ def import_news_data(
             return None
 
     if not df.empty and 'datetime' in df.columns:
-        df['datetime'] = df['datetime'].apply(safe_ts)
-
-    # Connect to the database and create news table if not exists
+        df['datetime'] = df['datetime'].apply(safe_convert)
+    
+    # Connect to the database and create news table if it doesn't exist
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
-
+    
     table_name = f"{ticker}_news"
     create_table_query = f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
@@ -227,8 +189,8 @@ def import_news_data(
     """
     cursor.execute(create_table_query)
     conn.commit()
-
-    # Insert news data with upsert
+    
+    # Insert news data (ignoring sentiment for now)
     insert_query = f"""
     INSERT INTO {table_name} (news_id, date_time, headline, related, source_, summary)
     VALUES (%s, %s, %s, %s, %s, %s)
@@ -239,7 +201,7 @@ def import_news_data(
         source_ = VALUES(source_),
         summary = VALUES(summary)
     """
-
+    
     rows_inserted = 0
     for _, row in df.iterrows():
         if pd.isna(row.get('id')) or pd.isna(row.get('datetime')):
@@ -254,25 +216,22 @@ def import_news_data(
         )
         cursor.execute(insert_query, data)
         rows_inserted += 1
-
+    
     conn.commit()
     cursor.close()
     conn.close()
+    print(f"Inserted {rows_inserted} news articles into {ticker}_news table.")
 
-    msg_done = f"Inserted {rows_inserted} news articles into {ticker}_news table."
-    if log_queue:
-        log_queue.put(msg_done)
-    else:
-        print(msg_done)
-
-
-# ----------------- CLI Testing -----------------
+# =================== Main Execution ===================
 
 if __name__ == "__main__":
-    # Example: Import stock data and news data for a given ticker
+    # Example: Import stock data and news data for a given ticker.
     ticker_symbol = input("Enter ticker symbol: ").strip().upper()
     print(f"Importing stock data for {ticker_symbol}...")
     create_new_ticker_table(ticker_symbol)
-
+    
     print(f"Importing news data for {ticker_symbol}...")
-    import_news_data(ticker_symbol)
+    # Optionally, you can adjust the start date for news import.
+    import_news_start = datetime.date(2024, 1, 1)
+    import_news_end = datetime.date.today()
+    import_news_data(ticker_symbol, start_date=import_news_start, end_date=import_news_end)

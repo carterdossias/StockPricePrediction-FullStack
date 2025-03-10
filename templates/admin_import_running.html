@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Import in Progress</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    #logWindow {
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      padding: 10px;
+      width: 80%;
+      height: 300px;
+      margin: 20px auto;
+      overflow-y: scroll;
+      font-family: monospace;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/stockview">Stock View</a>
+      <a href="/admin">Admin</a>
+    </nav>
+    <h1>Import in Progress for {{ ticker }}</h1>
+    <div id="logWindow"></div>
+  </div>
+
+  <script>
+    // Connect to SSE endpoint
+    const logWindow = document.getElementById('logWindow');
+    const source = new EventSource("/admin/import_logs");
+
+    source.onmessage = function(e) {
+      // Append new log lines
+      logWindow.textContent += e.data + "\n";
+      // Auto-scroll
+      logWindow.scrollTop = logWindow.scrollHeight;
+    };
+
+    source.onerror = function(e) {
+      logWindow.textContent += "Error: unable to get updates.\n";
+      source.close();
+    };
+  </script>
+</body>
+</html>
