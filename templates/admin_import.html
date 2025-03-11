@@ -2,41 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Import Ticker Data</title>
+  <title>Import Ticker Data - Trading Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Link to external CSS file -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
-    /* Additional styling specific to the admin import page, if needed */
+    /* Additional styling specific to admin import page */
     .info {
       text-align: center;
       font-size: 1.1em;
       margin-bottom: 20px;
-      color: #555;
+      color: #e0e0e0;
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="logo">Trading Dashboard</div>
     <nav>
       <a href="/">Home</a>
       <a href="/about">About</a>
       <a href="/stockview">Stock View</a>
       <a href="/admin">Admin</a>
     </nav>
-    <h1>Import New Ticker Data</h1>
-    <div class="info">
-      <p>This process will import both historical stock data and related news data for the specified ticker.</p>
-      <p>Note that this should only be used for adding <b>NEW</b> stocks, not updating.</p>
-      <p>Currently it does <b>NOT</b> automatically run sentiment analysis.</p>
+  </header>
+
+  <!-- Main Content Area -->
+  <div class="container">
+    <div class="card">
+      <h1 style="text-align: center; color: #fff;">Import New Ticker Data</h1>
+      <div class="info">
+        <p>This process will import both historical stock data and related news data for the specified ticker.</p>
+        <p>Note: Use this only for adding <b>new</b> stocks, not for updating existing data.</p>
+        <p>Currently, it does <b>not</b> automatically run sentiment analysis.</p>
+      </div>
+      <form method="POST" action="{{ url_for('import_ticker') }}">
+        <div class="form-group">
+          <label for="ticker">Ticker:</label>
+          <input type="text" name="ticker" id="ticker" placeholder="Enter Ticker (e.g., MSFT)" required>
+        </div>
+        <button type="submit">Import Data</button>
+      </form>
+      {% if message %}
+      <div class="message" style="text-align: center; margin-top: 20px;">
+        {{ message }}
+      </div>
+      {% endif %}
+      <div style="text-align: center; margin-top: 20px;">
+        <a class="button" href="{{ url_for('admin') }}">Back to Admin Portal</a>
+      </div>
     </div>
-    <form method="POST" action="{{ url_for('import_ticker') }}">
-      <input type="text" name="ticker" placeholder="Enter Ticker (e.g., MSFT)" required>
-      <button type="submit">Import Data</button>
-    </form>
-    {% if message %}
-      <div class="message">{{ message }}</div>
-    {% endif %}
-    <p style="text-align: center;"><a href="{{ url_for('admin') }}">Back to Admin Portal</a></p>
   </div>
 </body>
 </html>

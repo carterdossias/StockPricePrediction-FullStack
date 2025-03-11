@@ -2,42 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Stock View</title>
+  <title>Stock View - Trading Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Link to your external CSS file -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <div class="container">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="logo">Trading Dashboard</div>
     <nav>
       <a href="/">Home</a>
       <a href="/about">About</a>
       <a href="/stockview">Stock View</a>
       <a href="/admin">Admin</a>
     </nav>
-    
-    <h1>Stock View</h1>
-    
-    {% if error %}
-      <div class="error">{{ error }}</div>
-    {% endif %}
-    
-    <!-- Form to enter ticker and number of days -->
-    <form method="POST" action="/stockview">
-      <input type="text" name="ticker" placeholder="Enter ticker (e.g., AAPL)" required>
-      <input type="text" name="days" placeholder="Days (e.g., 30)" required>
-      <button type="submit">View Stock Data</button>
-    </form>
-    
+  </header>
+
+  <!-- Main Content Area -->
+  <div class="container">
+    <div class="card">
+      <h1 style="text-align: center; color: #fff;">Stock View</h1>
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+      
+      <!-- Form to enter ticker and number of days -->
+      <form method="POST" action="/stockview">
+        <div class="form-group">
+          <label for="ticker">Ticker:</label>
+          <input type="text" name="ticker" id="ticker" placeholder="Enter ticker (e.g., AAPL)" required>
+        </div>
+        <div class="form-group">
+          <label for="days">Days:</label>
+          <input type="text" name="days" id="days" placeholder="Days (e.g., 30)" required>
+        </div>
+        <button type="submit">View Stock Data</button>
+      </form>
+    </div>
+
     {% if ticker and plot_png %}
-    <div class="graph">
-      <h2>{{ ticker }} Stock Data (Last {{ days }} Days)</h2>
-      <img src="data:image/png;base64,{{ plot_png }}" alt="Historical Data Plot">
+    <div class="card result">
+      <h2 style="text-align: center;">{{ ticker }} Stock Data (Last {{ days }} Days)</h2>
+      <div class="graph">
+        <img src="data:image/png;base64,{{ plot_png }}" alt="Historical Data Plot">
+      </div>
     </div>
     {% endif %}
-    
+
     <p style="text-align: center; margin-top: 20px;">
-      <a href="/">Back to Home</a>
+      <a class="button" href="/">Back to Home</a>
     </p>
   </div>
 </body>

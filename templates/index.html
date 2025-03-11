@@ -2,69 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Stock Price Prediction</title>
+  <title>Trading Dashboard - Stock Price Prediction</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Link to external CSS file -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <!-- Admin button at top right -->
-  <div class="admin-button">
-    <a href="/admin">Admin</a>
-  </div>
-
-  <div class="container">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="logo">Trading Dashboard</div>
     <nav>
       <a href="/">Home</a>
       <a href="/about">About</a>
       <a href="/stockview">Stock View</a>
+      <a href="/admin">Admin</a>
     </nav>
-    
+  </header>
+
+  <!-- Main Content Area -->
+  <div class="container">
     <h1>Stock Price Prediction</h1>
     
     {% if error %}
       <div class="error">{{ error }}</div>
     {% endif %}
     
-    <form id="predictForm" method="POST">
-      <label for="ticker">Ticker:</label>
-      <input type="text" name="ticker" id="ticker" placeholder="e.g., AAPL" required />
-      
-      <label for="date">Target Date (YYYY-MM-DD):</label>
-      <input type="text" name="date" id="date" placeholder="e.g., 2025-03-01" required />
-
-      <button type="submit">Predict</button>
-    </form>
+    <div class="card">
+      <form id="predictForm" method="POST">
+        <div class="form-group">
+          <label for="ticker">Ticker:</label>
+          <input type="text" name="ticker" id="ticker" placeholder="e.g., AAPL" required />
+        </div>
+        <div class="form-group">
+          <label for="date">Target Date (YYYY-MM-DD):</label>
+          <input type="text" name="date" id="date" placeholder="e.g., 2025-03-01" required />
+        </div>
+        <button type="submit">Predict</button>
+      </form>
+    </div>
     
-    <!-- Spinner to show while the model is running -->
+    <!-- Spinner for processing -->
     <div class="spinner" id="spinner"></div>
     
     <div id="resultArea">
       {% if predicted_price %}
-      <div class="result">
+      <div class="card result">
         <p>
           Predicted closing price for <strong>{{ ticker }}</strong> on 
           <strong>{{ date_str }}</strong>:
-          <span class="predicted">
-            ${{ "%.2f"|format(predicted_price) }}
-          </span>
+          <span class="predicted">${{ "%.2f"|format(predicted_price) }}</span>
         </p>
-        
         {% if actual_price is not none %}
         <p>
           Actual closing price for <strong>{{ ticker }}</strong> on 
           <strong>{{ date_str }}</strong>:
-          <span class="actual">
-            ${{ "%.2f"|format(actual_price) }}
-          </span>
+          <span class="actual">${{ "%.2f"|format(actual_price) }}</span>
         </p>
         {% endif %}
-        
         {% if actual_msg %}
           <p class="error">{{ actual_msg }}</p>
         {% endif %}
-        
-        <img src="data:image/png;base64,{{ plot_png }}" alt="Stock Price Prediction Plot" />
+        <div class="chart">
+          <img src="data:image/png;base64,{{ plot_png }}" alt="Stock Price Prediction Plot" />
+        </div>
       </div>
       {% endif %}
     </div>

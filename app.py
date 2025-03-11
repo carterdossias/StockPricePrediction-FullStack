@@ -188,6 +188,41 @@ def import_logs():
     """
     return Response(stream_with_context(sse_stream()), mimetype='text/event-stream')
 
+
+@app.route('/admin/manual_update', methods=['GET'])
+@basic_auth.required
+def manual_update():
+    """
+    Kicks off the daily_update script in a background thread,
+    then returns the SSE log page (admin_import_running.html).
+    """
+    def daily_update_job():
+        try:
+            # Put a start message into the log queue
+            log_queue.put("Starting manual incremental update for all active tickers...")
+
+            # Import your daily_update script logic
+            from daily_update import update_tickers_incrementally
+
+            # Run the incremental update
+            update_tickers_incrementally()
+
+            # When done, log a completion message
+            log_queue.put("Finished manual incremental update.")
+        except Exception as e:
+            log_queue.put(f"Error during manual incremental update: {e}")
+        finally:
+            # Signal SSE stream to stop
+            log_queue.put(None)
+
+    # Start the background thread
+    threading.Thread(target=daily_update_job).start()
+
+    # Return the SSE log viewer page
+    # We can reuse the same 'admin_import_running.html' template
+    # Just pass a placeholder 'ticker' if needed
+    return render_template('admin_import_running.html', ticker="All Active Tickers")
+
 # ---------- Other Routes (index, stockview, about) ----------
 @app.route('/about')
 def about():
