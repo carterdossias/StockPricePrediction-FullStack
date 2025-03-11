@@ -35,6 +35,7 @@ def create_new_ticker_table(
     Fetch historical stock data for a ticker via yfinance,
     create a table (if it doesn't exist) named <TICKER>_data,
     and insert the data using upsert functionality.
+    Also ensures the ticker is recorded in the `tickers` table with active=1.
     """
     ticker_symbol = ticker_symbol.upper().strip()
     if log_queue:
@@ -100,6 +101,20 @@ def create_new_ticker_table(
         cursor.execute(insert_query, data_tuple)
 
     conn.commit()
+
+    # Now upsert into the `tickers` table
+    # If the ticker doesn't exist, insert it with date_added = CURDATE(), last_update = CURDATE().
+    # If it exists, set active=1 and update last_update=CURDATE().
+    ticker_upsert_query = """
+        INSERT INTO tickers (symbol, date_added, last_update)
+        VALUES (%s, CURDATE(), CURDATE())
+        ON DUPLICATE KEY UPDATE
+            active = 1,
+            last_update = CURDATE();
+    """
+    cursor.execute(ticker_upsert_query, (ticker_symbol,))
+    conn.commit()
+
     cursor.close()
     conn.close()
 
@@ -241,16 +256,16 @@ def import_news_data(
     """
 
     rows_inserted = 0
-    for _, row in df.iterrows():
-        if pd.isna(row.get('id')) or pd.isna(row.get('datetime')):
+    for _, row_data in df.iterrows():
+        if pd.isna(row_data.get('id')) or pd.isna(row_data.get('datetime')):
             continue
         data = (
-            int(row['id']),
-            row['datetime'],
-            row.get('headline', ''),
-            row.get('related', ''),
-            row.get('source', ''),
-            row.get('summary', '')
+            int(row_data['id']),
+            row_data['datetime'],
+            row_data.get('headline', ''),
+            row_data.get('related', ''),
+            row_data.get('source', ''),
+            row_data.get('summary', '')
         )
         cursor.execute(insert_query, data)
         rows_inserted += 1
