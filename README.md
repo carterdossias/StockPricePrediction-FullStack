@@ -36,7 +36,7 @@ The goal of this project is to leverage various data sources—such as historica
 ## Features
 - **Automatic Data Import**: Python scripts fetch stock data (using Yahoo Finance) and import it into MySQL.
 - **News Sentiment Analysis**: Daily news summaries are scored with a sentiment value \([-1, +1]\), which is stored alongside stock data.
-- **Database Management**: A homelab MySQL server (managed by @NoahMalewicki) holds all data in structured tables (e.g., `<TICKER>_data`).
+- **Database Management**: A homelab MySQL server running in my rack (managed by @NoahMalewicki) holds all data in structured tables (e.g., `<TICKER>_data`).
 - **Admin Portal**: A password-protected interface that lets authorized users import new tickers and manage data.
 - **Web Interface**: Users can view historical data, run predictions (once the ML model is in place), and see sentiment analysis.
 
