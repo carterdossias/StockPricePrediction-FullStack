@@ -16,6 +16,13 @@
       <a href="/about">About</a>
       <a href="/stockview">Stock View</a>
       <a href="/admin">Admin</a>
+      {% if session.get('user_id') %}
+        <span class="welcome">Welcome, {{ session['username'] }}</span>
+        <a class="button" href="{{ url_for('signout') }}">Sign Out</a>
+      {% else %}
+        <a class="button" href="{{ url_for('signin') }}">Sign In</a>
+        <a class="button" href="{{ url_for('signup') }}">Sign Up</a>
+      {% endif %}
     </nav>
   </header>
 

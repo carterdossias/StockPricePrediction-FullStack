@@ -11,54 +11,138 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import yfinance as yf
 import tensorflow as tf
-from flask import Flask, request, render_template, redirect, url_for, flash, Response, stream_with_context
+from flask import Flask, request, render_template, redirect, url_for, flash, Response, stream_with_context, session
 from tensorflow.keras.models import load_model
 from flask_basicauth import BasicAuth
-from credentials import ipCred, usernameCred, passwordCred, databaseCred
-from ticker_import import create_new_ticker_table, import_news_data
-import time
 import threading
 import queue
+import time
+import bcrypt
 
+from credentials import ipCred, usernameCred, passwordCred, databaseCred
+from ticker_import import create_new_ticker_table, import_news_data
 
-# = = = = = = = = = = = Here we configure the connection to the DB = = = = = = = = = = = 
+# ----------------- DB Configuration -----------------
 db_config = {
     'host': ipCred,
     'user': usernameCred,
     'password': passwordCred,
     'database': databaseCred
 }
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 app = Flask(__name__)
-app.secret_key = "replace_with_a_secret_key" # will replace in the future
+app.secret_key = "replace_with_a_secret_key"  # Replace with a secure key
 
 # Configure Basic Auth for admin routes
 app.config['BASIC_AUTH_USERNAME'] = 'admin'
-app.config['BASIC_AUTH_PASSWORD'] = 'admin'  # will change to a secure password
-app.config['BASIC_AUTH_FORCE'] = False  # only force auth on specific routes
+app.config['BASIC_AUTH_PASSWORD'] = 'admin'  # Change to a secure password
+app.config['BASIC_AUTH_FORCE'] = False
 basic_auth = BasicAuth(app)
 
-# Your existing functions here...
+# ----------------- Global Log Queue and SSE Endpoint -----------------
+log_queue = queue.Queue()  # Thread-safe queue for log messages
+
+def sse_stream():
+    """Generator function that yields log messages from log_queue."""
+    while True:
+        line = log_queue.get()
+        if line is None:
+            break
+        yield f"data: {line}\n\n"
+
+@app.route('/admin/import_logs')
+@basic_auth.required
+def import_logs():
+    """SSE endpoint that streams log messages from log_queue."""
+    return Response(stream_with_context(sse_stream()), mimetype='text/event-stream')
+
+# ----------------- User Authentication Routes -----------------
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form.get('username').strip()
+        email = request.form.get('email').strip()
+        password = request.form.get('password').encode('utf-8')  # encode password as bytes
+
+        # Hash the password with bcrypt
+        hashed_password = bcrypt.hashpw(password, bcrypt.gensalt())
+
+        try:
+            conn = mysql.connector.connect(**db_config)
+            cursor = conn.cursor()
+            insert_query = """
+                INSERT INTO users (username, email, password_hash, account_balance, available_funds, portfolio_value, risk_profile, account_status)
+                VALUES (%s, %s, %s, 0.00, 0.00, 0.00, 'moderate', 1);
+            """
+            cursor.execute(insert_query, (username, email, hashed_password.decode('utf-8')))
+            conn.commit()
+            flash("Sign-up successful. Please sign in.", "success")
+            return redirect(url_for('signin'))
+        except mysql.connector.Error as err:
+            flash(f"Error: {err}", "danger")
+        finally:
+            cursor.close()
+            conn.close()
+    return render_template('signup.html')
+
+@app.route('/signin', methods=['GET', 'POST'])
+def signin():
+    if request.method == 'POST':
+        username_or_email = request.form.get('username_or_email').strip()
+        password = request.form.get('password').encode('utf-8')
+        try:
+            conn = mysql.connector.connect(**db_config)
+            cursor = conn.cursor(dictionary=True)
+            query = """
+                SELECT user_id, username, email, password_hash
+                FROM users
+                WHERE username = %s OR email = %s
+                LIMIT 1;
+            """
+            cursor.execute(query, (username_or_email, username_or_email))
+            user = cursor.fetchone()
+            if user and bcrypt.checkpw(password, user['password_hash'].encode('utf-8')):
+                session['user_id'] = user['user_id']
+                session['username'] = user['username']
+                
+                # Update the last_login field
+                update_query = "UPDATE users SET last_login = NOW() WHERE user_id = %s"
+                cursor.execute(update_query, (user['user_id'],))
+                conn.commit()
+                
+                flash("Signed in successfully.", "success")
+                return redirect(url_for('index'))
+            else:
+                flash("Invalid credentials.", "danger")
+        except mysql.connector.Error as err:
+            flash(f"Database error: {err}", "danger")
+        finally:
+            cursor.close()
+            conn.close()
+    return render_template('signin.html')
+
+@app.route('/signout')
+def signout():
+    session.clear()
+    flash("You have been signed out.", "info")
+    return redirect(url_for('index'))
+
+# ----------------- Existing Functions -----------------
 def load_model_and_objects(ticker):
-    # ... (existing code)
     model_path = f"models/{ticker}_lstm_model.h5"
     scaler_path = f"models/{ticker}_scaler.pkl"
     look_back_path = f"models/{ticker}_look_back.pkl"
-    
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"No file or directory found at {model_path}")
     if not os.path.exists(scaler_path):
         raise FileNotFoundError(f"No file or directory found at {scaler_path}")
     if not os.path.exists(look_back_path):
         raise FileNotFoundError(f"No file or directory found at {look_back_path}")
-
     model = load_model(model_path)
     with open(scaler_path, 'rb') as f:
         scaler = pickle.load(f)
     with open(look_back_path, 'rb') as f:
         look_back = pickle.load(f)
-    
     return model, scaler, look_back
 
 def fetch_historical_data(ticker):
@@ -70,11 +154,9 @@ def fetch_historical_data(ticker):
     conn = mysql.connector.connect(**db_config)
     df = pd.read_sql(query, conn)
     conn.close()
-    
     df['date'] = pd.to_datetime(df['date'])
     df.sort_values('date', inplace=True)
     df.reset_index(drop=True, inplace=True)
-    
     return df
 
 def iterative_forecast(model, scaler, data, look_back, steps_ahead):
@@ -124,11 +206,10 @@ def create_plot(historical_df, target_date, predicted_price=None, actual_price=N
     plt.close(fig)
     return encoded
 
-# ---------- Admin Routes ----------
+# ----------------- Admin Routes -----------------
 @app.route('/admin')
 @basic_auth.required
 def admin():
-    # This is the main admin portal page.
     return render_template('admin.html')
 
 @app.route('/admin/import_ticker', methods=['GET', 'POST'])
@@ -138,92 +219,40 @@ def import_ticker():
     if request.method == 'POST':
         ticker = request.form.get('ticker', '').upper().strip()
         if ticker:
-            # Start a background thread to do the import
             def import_job(ticker_symbol):
                 try:
                     from ticker_import import create_new_ticker_table, import_news_data
                     log_queue.put(f"Starting import for {ticker_symbol}...")
-                    
-                    # 1) Import stock data
                     create_new_ticker_table(ticker_symbol, log_queue=log_queue)
-                    
-                    # 2) Import news data
                     import_news_data(ticker_symbol, log_queue=log_queue)
-                    
                     log_queue.put(f"Finished import for {ticker_symbol}.")
                 except Exception as e:
                     log_queue.put(f"Error importing data for {ticker_symbol}: {e}")
                 finally:
-                    # Signal SSE stream to stop
                     log_queue.put(None)
-
             threading.Thread(target=import_job, args=(ticker,)).start()
-            
-            # We can display a page that shows the SSE log viewer
             return render_template('admin_import_running.html', ticker=ticker)
         else:
             message = "Please enter a ticker symbol."
     return render_template('admin_import.html', message=message)
 
-
-log_queue = queue.Queue()  # A thread-safe queue to hold log lines
-
-def sse_stream():
-    """Generator function that yields log messages from log_queue."""
-    while True:
-        # Blocks until a log message is available
-        line = log_queue.get()
-        # If we receive a sentinel indicating the import is done, break
-        if line is None:
-            break
-        # SSE format: "data: <message>\n\n"
-        yield f"data: {line}\n\n"
-
-@app.route('/admin/import_logs')
-@basic_auth.required
-def import_logs():
-    """
-    SSE endpoint that streams log messages from log_queue.
-    The client can connect via EventSource to get real-time updates.
-    """
-    return Response(stream_with_context(sse_stream()), mimetype='text/event-stream')
-
-
 @app.route('/admin/manual_update', methods=['GET'])
 @basic_auth.required
 def manual_update():
-    """
-    Kicks off the daily_update script in a background thread,
-    then returns the SSE log page (admin_import_running.html).
-    """
     def daily_update_job():
         try:
-            # Put a start message into the log queue
             log_queue.put("Starting manual incremental update for all active tickers...")
-
-            # Import your daily_update script logic
             from daily_update import update_tickers_incrementally
-
-            # Run the incremental update
             update_tickers_incrementally()
-
-            # When done, log a completion message
             log_queue.put("Finished manual incremental update.")
         except Exception as e:
             log_queue.put(f"Error during manual incremental update: {e}")
         finally:
-            # Signal SSE stream to stop
             log_queue.put(None)
-
-    # Start the background thread
     threading.Thread(target=daily_update_job).start()
-
-    # Return the SSE log viewer page
-    # We can reuse the same 'admin_import_running.html' template
-    # Just pass a placeholder 'ticker' if needed
     return render_template('admin_import_running.html', ticker="All Active Tickers")
 
-# ---------- Other Routes (index, stockview, about) ----------
+# ----------------- Other Routes -----------------
 @app.route('/about')
 def about():
     return render_template('about.html')

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sign In - Trading Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="top-nav">
+    <div class="logo">Trading Dashboard</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/signup">Sign Up</a>
+    </nav>
+  </header>
+  
+  <div class="container">
+    <div class="card">
+      <h1 style="text-align: center; color: #fff;">Sign In</h1>
+      <form method="POST" action="{{ url_for('signin') }}">
+        <div class="form-group">
+          <label for="username_or_email">Username or Email:</label>
+          <input type="text" name="username_or_email" id="username_or_email" placeholder="Enter username or email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input type="password" name="password" id="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit">Sign In</button>
+      </form>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+</body>
+</html>
