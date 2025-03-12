@@ -1,12 +1,12 @@
 # Stock Price Prediction App
 
 ## Main Contributors
-- @CarterDossias (Connections / Data Import / Data Prep) 
+- @CarterDossias (FinBert Sentiment Analysis Fine Tuning / Connections / Data Import / Data Prep) 
 - @NoahMalewicki (Database Design / Mangament) 
 - @RishiBokka (Creating ML Model For Predictions)
 
-This repository contains a full-stack application for predicting stock prices based on:
-1. **Historical stock data** stored in a MySQL database.
+This project is a FULL STACK application that is aimed at prediciting stock price based on the following:
+1. **Historical stock data** stored in a MySQL database. 
 2. **News sentiment analysis** performed on daily articles related to each ticker.
 
 ## Table of Contents
@@ -25,20 +25,22 @@ This repository contains a full-stack application for predicting stock prices ba
 ---
 
 ## Overview
-The goal of this project is to leverage various data sources—such as historical stock data and news articles—to build a machine learning model capable of predicting a stock’s closing price for a specified day. The application consists of:
+The goal of the project is to leverage stock data sources and data sets along with financial news articles about each stock to build a maching learning model capable of predicting a stock's closing price for a specific day
+The application consists of the following:
 
-1. **A MySQL database** to store stock data and sentiment scores.
-2. **Python scripts** for data ingestion, processing, and sentiment analysis.
+1. **A MySQL database** running in my homelab to store stock data and sentiment scores.
+2. **Python scripts** for data ingestion, processing, and sentiment analysis along with machine learning.
 3. **A Web App** (Flask) that allows users to query and visualize data, run predictions, and manage data import via an admin portal.
 
 ---
 
 ## Features
-- **Automatic Data Import**: Python scripts fetch stock data (using Yahoo Finance) and import it into MySQL.
-- **News Sentiment Analysis**: Daily news summaries are scored with a sentiment value \([-1, +1]\), which is stored alongside stock data.
+- **Automatic Data Import**: Python scripts can be run to fetch stock data (using Yahoo Finance) and import it into MySQL.
+- **News Sentiment Analysis**: Daily news summaries are scored with my fine tuned FinnBert modelwith a sentiment value \([-1, +1]\), which is stored alongside stock data.
 - **Database Management**: A homelab MySQL server running in my rack (managed by @NoahMalewicki) holds all data in structured tables (e.g., `<TICKER>_data`).
 - **Admin Portal**: A password-protected interface that lets authorized users import new tickers and manage data.
-- **Web Interface**: Users can view historical data, run predictions (once the ML model is in place), and see sentiment analysis.
+- **Web Interface**: Users can view historical data, run predictions, and see sentiment analysis.
+- **User Accounts**: Users can sign up / sign in to create an account where the passwords are stored in hash for security.
 
 ---
 
@@ -47,24 +49,26 @@ Here’s a simplified view of the repository layout:
 ---
 
 ## Database Setup
-1. **MySQL Server**: A MySQL database is hosted on a homelab server (hosted by @NoahMalewicki).  
-2. **Stock Data Tables**: Each ticker has its own table named `<TICKER>_data` with columns:
+1. **MySQL Server**: A MySQL database is hosted on a homelab linux server.  
+2. **Stock Data Tables**: Each ticker has its own tables named `<TICKER>_data` `<TICKER>_news` with columns:
    - `date` (DATE, Primary Key)
    - `open`, `high`, `low`, `close` (FLOAT)
    - `volume` (BIGINT)
-   - (Optional) `sentiment` (FLOAT) for daily sentiment scores.
+   - `sentiment` (FLOAT) for daily sentiment scores.
+   - and many more
 3. **Data Import Scripts**: 
-   - `ticker_import.py` fetches historical data from Yahoo Finance (`yfinance`) and imports it into `<TICKER>_data`.  
+   - `ticker_import.py` fetches historical data from Yahoo Finance (`yfinance`) and imports it into `<TICKER>_data`. It also grabs news from Finnhub with an API key defined privately and inserts news into `<TICKER>_news`
    - `app.py` includes an admin route `/admin/import_ticker` to trigger this script via the web interface.
 
 ---
 
 ## Sentiment Analysis
 We use Python scripts to:
-- Pull news articles from the Finnhub API (or other providers).
+- Pull news articles from the Finnhub API.
 - Summarize or extract the relevant text.
-- Apply a sentiment model (e.g., a pretrained Transformer or logistic regression) to generate a daily sentiment score for each article.  
-- Aggregate sentiment scores into a single daily value (averaging or summation) and store it in the database.
+- Fine tune Finbert's model on thousands of labeled data
+- Apply my fine tuned sentiment model to generate a daily sentiment score for each article.  
+- Aggregate sentiment scores into a single daily value (summation) and store it in the database.
 
 ---
 
@@ -84,14 +88,15 @@ The Flask web application serves as the front end:
 - **Stock View** (`/stockview`): Plots historical closing prices (and eventually sentiment).
 - **About Page** (`/about`): Provides details about the project.
 - **Admin Portal** (`/admin`): Requires authentication (using Flask-BasicAuth or similar). 
-  - **Import Ticker** (`/admin/import_ticker`): Admins can create a new table for a given ticker and import data automatically.
+- **Import Ticker** (`/admin/import_ticker`): Admins can create a new table for a given ticker and import data automatically.
+- And many more
 
 ---
 
 ## Data Sources
 1. **Yahoo Finance**: 
    - Used to retrieve daily stock data via the `yfinance` library.  
-   - `hist = yf.Ticker(ticker_symbol).history(period="max")` is a common approach.
+   - `hist = yf.Ticker(ticker_symbol).history(period="max")` is our approach.
 2. **Finnhub API**: 
    - Provides news articles for a given ticker.  
    - We fetch daily summaries and run sentiment analysis, storing the scores in MySQL.
