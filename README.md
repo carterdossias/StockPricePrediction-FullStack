@@ -25,7 +25,7 @@ This project is a FULL STACK application that is aimed at prediciting stock pric
 ---
 
 ## Overview
-The goal of the project is to leverage stock data sources and data sets along with financial news articles about each stock to build a maching learning model capable of predicting a stock's closing price for a specific day
+The goal of the project is to leverage stock data sources and data sets along with financial news articles about each stock to build a maching learning model capable of predicting a stock's closing price for a specific day.
 The application consists of the following:
 
 1. **A MySQL database** running in my homelab to store stock data and sentiment scores.
@@ -36,7 +36,7 @@ The application consists of the following:
 
 ## Features
 - **Automatic Data Import**: Python scripts can be run to fetch stock data (using Yahoo Finance) and import it into MySQL.
-- **News Sentiment Analysis**: Daily news summaries are scored with my fine tuned FinnBert modelwith a sentiment value \([-1, +1]\), which is stored alongside stock data.
+- **News Sentiment Analysis**: Daily news summaries are scored with my fine tuned FinnBert model with a sentiment value \([-1, +1]\), which is stored alongside stock data.
 - **Database Management**: A homelab MySQL server running in my rack (managed by @NoahMalewicki) holds all data in structured tables (e.g., `<TICKER>_data`).
 - **Admin Portal**: A password-protected interface that lets authorized users import new tickers and manage data.
 - **Web Interface**: Users can view historical data, run predictions, and see sentiment analysis.
@@ -66,7 +66,7 @@ Here’s a simplified view of the repository layout:
 We use Python scripts to:
 - Pull news articles from the Finnhub API.
 - Summarize or extract the relevant text.
-- Fine tune Finbert's model on thousands of labeled data
+- Fine tune Finbert's model with massive labeled datasets.
 - Apply my fine tuned sentiment model to generate a daily sentiment score for each article.  
 - Aggregate sentiment scores into a single daily value (summation) and store it in the database.
 
