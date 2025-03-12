@@ -1,3 +1,6 @@
 credentials.py
 __pycache__/
 finbert-finetuned/
+logs/
+models/
+labeledNews.csv
