@@ -237,7 +237,8 @@ def import_news_data(
         related VARCHAR(10),
         source_ VARCHAR(255),
         summary TEXT,
-        sentiment DOUBLE
+        sentiment DOUBLE,
+        sentiment_label VARCHAR(10) DEFAULT NULL
     );
     """
     cursor.execute(create_table_query)

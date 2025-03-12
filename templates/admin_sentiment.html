@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentiment Analysis - Trading Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="logo">Trading Dashboard</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/stockview">Stock View</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </header>
+
+  <!-- Main Content Area -->
+  <div class="container">
+    <div class="card">
+      <h1 style="text-align: center; color: #fff;">Sentiment Analysis</h1>
+      <form method="POST" action="{{ url_for('admin_sentiment') }}">
+        <div class="form-group">
+          <label for="ticker">Ticker:</label>
+          <input type="text" name="ticker" id="ticker" placeholder="Enter Ticker (e.g., AAPL)" required>
+        </div>
+        <button type="submit" class="button">Run Sentiment Analysis</button>
+      </form>
+      {% if message %}
+        <div class="message" style="text-align: center; margin-top: 20px;">
+          {{ message }}
+        </div>
+      {% endif %}
+      <div style="text-align: center; margin-top: 20px;">
+        <a class="button" href="{{ url_for('admin') }}">Back to Admin Portal</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -24,18 +24,17 @@
     <div class="card">
       <h1 style="text-align: center; margin-bottom: 20px; color: #fff;">Admin Portal</h1>
       <p style="font-size: 1.1em; line-height: 1.6; text-align: center;">
-        Welcome to the admin portal. Use the links below to manage the database and run various operations.
-      </p>
-      <p style="font-size: 1.1em; line-height: 1.6; text-align: center;">
-        All database operations should be performed from the admin portal.
+        Welcome to the admin portal. Use the buttons below to manage your data and run various operations.
       </p>
       <ul style="list-style: none; padding: 0; text-align: center;">
         <li style="margin: 40px 0;">
           <a class="button" href="{{ url_for('import_ticker') }}">Import New Ticker Data</a>
         </li>
-        <!-- New Button for Manual Update -->
         <li style="margin: 40px 0;">
           <a class="button" href="{{ url_for('manual_update') }}">Manually Update Tickers</a>
+        </li>
+        <li style="margin: 40px 0;">
+          <a class="button" href="{{ url_for('admin_sentiment') }}">Run Sentiment Analysis</a>
         </li>
       </ul>
     </div>

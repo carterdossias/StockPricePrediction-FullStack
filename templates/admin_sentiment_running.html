@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentiment Analysis in Progress - Trading Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* Additional styling for the log window */
+    #logWindow {
+      background: #1e1e2f;
+      border: 1px solid #444;
+      padding: 15px;
+      width: 90%;
+      height: 300px;
+      margin: 20px auto;
+      overflow-y: scroll;
+      font-family: monospace;
+      font-size: 0.9em;
+      color: #e0e0e0;
+      white-space: pre-wrap;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="logo">Trading Dashboard</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/stockview">Stock View</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </header>
+  
+  <!-- Main Content Area -->
+  <div class="container">
+    <div class="card">
+      <h1 style="text-align: center; color: #fff;">Sentiment Analysis in Progress for {{ ticker }}</h1>
+      <div id="logWindow"></div>
+      <div style="text-align: center; margin-top: 20px;">
+        <a class="button" href="{{ url_for('admin') }}">Back to Admin Portal</a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const logWindow = document.getElementById('logWindow');
+    const source = new EventSource("/admin/import_logs");
+
+    source.onmessage = function(e) {
+      logWindow.textContent += e.data + "\n";
+      logWindow.scrollTop = logWindow.scrollHeight;
+    };
+
+    source.onerror = function(e) {
+      logWindow.textContent += "Error: unable to get updates.\n";
+      source.close();
+    };
+  </script>
+</body>
+</html>

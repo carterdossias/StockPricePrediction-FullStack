@@ -63,10 +63,7 @@ def signup():
         username = request.form.get('username').strip()
         email = request.form.get('email').strip()
         password = request.form.get('password').encode('utf-8')  # encode password as bytes
-
-        # Hash the password with bcrypt
         hashed_password = bcrypt.hashpw(password, bcrypt.gensalt())
-
         try:
             conn = mysql.connector.connect(**db_config)
             cursor = conn.cursor()
@@ -104,12 +101,9 @@ def signin():
             if user and bcrypt.checkpw(password, user['password_hash'].encode('utf-8')):
                 session['user_id'] = user['user_id']
                 session['username'] = user['username']
-                
-                # Update the last_login field
                 update_query = "UPDATE users SET last_login = NOW() WHERE user_id = %s"
                 cursor.execute(update_query, (user['user_id'],))
                 conn.commit()
-                
                 flash("Signed in successfully.", "success")
                 return redirect(url_for('index'))
             else:
@@ -251,6 +245,80 @@ def manual_update():
             log_queue.put(None)
     threading.Thread(target=daily_update_job).start()
     return render_template('admin_import_running.html', ticker="All Active Tickers")
+
+@app.route('/admin/sentiment_analysis', methods=['GET', 'POST'])
+@basic_auth.required
+def admin_sentiment():
+    message = None
+    if request.method == 'POST':
+        ticker = request.form.get('ticker', '').upper().strip()
+        if ticker:
+            def sentiment_job(ticker_symbol):
+                try:
+                    from transformers import pipeline
+                    classifier = pipeline(
+                        task="text-classification", 
+                        model="./finbert-finetuned", 
+                        tokenizer="./finbert-finetuned", 
+                        device=-1
+                    )
+                    conn = mysql.connector.connect(**db_config)
+                    cursor_fetch = conn.cursor()
+                    fetch_query = f"""
+                        SELECT news_id, summary
+                        FROM {ticker_symbol}_news
+                        WHERE sentiment IS NULL
+                        LIMIT 10000;
+                    """
+                    cursor_fetch.execute(fetch_query)
+                    rows = cursor_fetch.fetchall()
+                    cursor_fetch.close()
+                    if not rows:
+                        log_queue.put("No rows to update.")
+                        conn.close()
+                        return
+                    id_summary_pairs = [(news_id, summary) for news_id, summary in rows if summary and summary.strip()]
+                    if not id_summary_pairs:
+                        log_queue.put("No valid summaries found.")
+                        conn.close()
+                        return
+                    news_ids, summaries = zip(*id_summary_pairs)
+                    batch_size = 32
+                    results = []
+                    for i in range(0, len(summaries), batch_size):
+                        batch = list(summaries[i:i+batch_size])
+                        batch_results = classifier(batch, truncation=True)
+                        results.extend(batch_results)
+                    cursor_update = conn.cursor()
+                    update_query = f"""
+                        UPDATE {ticker_symbol}_news
+                        SET sentiment = %s, sentiment_label = %s
+                        WHERE news_id = %s
+                    """
+                    for news_id, result in zip(news_ids, results):
+                        r = result[0] if isinstance(result, list) else result
+                        label = r['label'].upper()  # "POSITIVE", "NEGATIVE", "NEUTRAL"
+                        score = r['score']
+                        if label == "POSITIVE":
+                            sentiment_score = score
+                        elif label == "NEGATIVE":
+                            sentiment_score = -score
+                        else:
+                            sentiment_score = 0.0
+                        cursor_update.execute(update_query, (sentiment_score, label, news_id))
+                    conn.commit()
+                    cursor_update.close()
+                    conn.close()
+                    log_queue.put("Sentiment scores and labels updated successfully.")
+                except Exception as e:
+                    log_queue.put(f"Error during sentiment analysis for {ticker_symbol}: {e}")
+                finally:
+                    log_queue.put(None)
+            threading.Thread(target=sentiment_job, args=(ticker,)).start()
+            return render_template('admin_sentiment_running.html', ticker=ticker)
+        else:
+            message = "Please enter a ticker symbol."
+    return render_template('admin_sentiment.html', message=message)
 
 # ----------------- Other Routes -----------------
 @app.route('/about')
