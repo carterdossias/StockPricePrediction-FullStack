@@ -1,10 +1,11 @@
 /* Global Styles */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #2a2d3f; /* Dark slate background */
+    font-family: 'Roboto', sans-serif;
+    background: #2a2d3f;
     color: #e0e0e0;
     margin: 0;
     padding: 0;
+    line-height: 1.6;
 }
 
 /* Top Navigation Bar */
@@ -31,11 +32,33 @@ body {
 .top-nav nav a:hover {
     color: #4fc3f7;
 }
+.top-nav .welcome {
+    margin-right: 15px;
+    font-size: 1em;
+}
+
+/* Buttons */
+.button {
+    background: #3498db;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+.button:hover {
+    background: #2980b9;
+}
+.button.small {
+    padding: 6px 12px;
+    font-size: 0.9em;
+}
 
 /* Main Container */
 .container {
     max-width: 900px;
-    margin: 80px auto 40px auto;
+    margin: 80px auto 40px;
     padding: 20px;
 }
 
@@ -79,6 +102,7 @@ form input[type="text"] {
     font-size: 1em;
     background: #2a2d3f;
     color: #e0e0e0;
+    transition: border 0.3s;
 }
 form input[type="text"]:focus {
     border-color: #4fc3f7;
@@ -150,21 +174,8 @@ form button:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* Button Container */
 .button-container {
     text-align: center;
     margin-top: 20px;
-  }
-  
-  .button {
-    background: #3498db;
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    transition: background 0.3s;
-  }
-  
-  .button:hover {
-    background: #2980b9;
-  }
+}

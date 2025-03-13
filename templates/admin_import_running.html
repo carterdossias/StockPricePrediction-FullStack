@@ -6,15 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Link to external CSS file -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Optional inline styles for the log window -->
   <style>
-    /* Additional styling for the log window to match the dashboard theme */
+    /* Log window styling */
     #logWindow {
       background: #1e1e2f;
       border: 1px solid #444;
       padding: 15px;
-      width: 90%;
+      width: 100%;
       height: 300px;
-      margin: 20px auto;
+      margin: 20px 0;
       overflow-y: scroll;
       font-family: monospace;
       font-size: 0.9em;
@@ -38,25 +39,25 @@
   </header>
   
   <!-- Main Content Area -->
-  <div class="container">
+  <main class="container">
     <div class="card">
-      <h1 style="text-align: center; color: #fff;">Import in Progress for {{ ticker }}</h1>
+      <h1>Import in Progress for {{ ticker }}</h1>
       <div id="logWindow"></div>
+      <div class="button-container">
+        <a class="button" href="{{ url_for('admin') }}">Back to Admin Portal</a>
+      </div>
     </div>
-  </div>
+  </main>
   
   <script>
-    // Connect to SSE endpoint
+    // Connect to the SSE endpoint for live logs.
     const logWindow = document.getElementById('logWindow');
     const source = new EventSource("/admin/import_logs");
-
     source.onmessage = function(e) {
-      // Append new log lines
       logWindow.textContent += e.data + "\n";
       // Auto-scroll to the bottom
       logWindow.scrollTop = logWindow.scrollHeight;
     };
-
     source.onerror = function(e) {
       logWindow.textContent += "Error: unable to get updates.\n";
       source.close();

@@ -6,15 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Link to external CSS file -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <style>
-    /* Additional styling specific to admin import page */
-    .info {
-      text-align: center;
-      font-size: 1.1em;
-      margin-bottom: 20px;
-      color: #e0e0e0;
-    }
-  </style>
 </head>
 <body>
   <!-- Top Navigation Bar -->
@@ -29,13 +20,13 @@
   </header>
 
   <!-- Main Content Area -->
-  <div class="container">
+  <main class="container">
     <div class="card">
-      <h1 style="text-align: center; color: #fff;">Import New Ticker Data</h1>
+      <h1>Import New Ticker Data</h1>
       <div class="info">
         <p>This process will import both historical stock data and related news data for the specified ticker.</p>
-        <p>Note: Use this only for adding <b>new</b> stocks, not for updating existing data.</p>
-        <p>Currently, it does <b>not</b> automatically run sentiment analysis.</p>
+        <p>Note: Use this only for adding <strong>new</strong> stocks, not for updating existing data.</p>
+        <p>Currently, it does <strong>not</strong> automatically run sentiment analysis.</p>
       </div>
       <form method="POST" action="{{ url_for('import_ticker') }}">
         <div class="form-group">
@@ -45,14 +36,12 @@
         <button type="submit">Import Data</button>
       </form>
       {% if message %}
-      <div class="message" style="text-align: center; margin-top: 20px;">
-        {{ message }}
-      </div>
+        <div class="message">{{ message }}</div>
       {% endif %}
-      <div style="text-align: center; margin-top: 20px;">
+      <div class="button-container">
         <a class="button" href="{{ url_for('admin') }}">Back to Admin Portal</a>
       </div>
     </div>
-  </div>
+  </main>
 </body>
 </html>

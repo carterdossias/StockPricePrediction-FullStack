@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <title>Sentiment Analysis in Progress - Trading Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Link to external CSS file -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
-    /* Additional styling for the log window */
+    /* Log window styling */
     #logWindow {
       background: #1e1e2f;
       border: 1px solid #444;
@@ -37,15 +38,15 @@
   </header>
   
   <!-- Main Content Area -->
-  <div class="container">
+  <main class="container">
     <div class="card">
-      <h1 style="text-align: center; color: #fff;">Sentiment Analysis in Progress for {{ ticker }}</h1>
+      <h1>Sentiment Analysis in Progress for {{ ticker }}</h1>
       <div id="logWindow"></div>
-      <div style="text-align: center; margin-top: 20px;">
+      <div class="button-container">
         <a class="button" href="{{ url_for('admin') }}">Back to Admin Portal</a>
       </div>
     </div>
-  </div>
+  </main>
   
   <script>
     const logWindow = document.getElementById('logWindow');

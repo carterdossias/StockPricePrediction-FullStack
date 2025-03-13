@@ -4,20 +4,25 @@
   <meta charset="UTF-8" />
   <title>Sign Up - Trading Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Link to external CSS file -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Optional: include a Google Font for a modern look -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Top Navigation Bar -->
   <header class="top-nav">
     <div class="logo">Trading Dashboard</div>
     <nav>
       <a href="/">Home</a>
-      <a href="/signin">Sign In</a>
+      <a class="button small" href="{{ url_for('signin') }}">Sign In</a>
     </nav>
   </header>
   
-  <div class="container">
+  <!-- Main Content Area -->
+  <main class="container">
     <div class="card">
-      <h1 style="text-align: center; color: #fff;">Sign Up</h1>
+      <h1>Sign Up</h1>
       <form method="POST" action="{{ url_for('signup') }}">
         <div class="form-group">
           <label for="username">Username:</label>
@@ -31,11 +36,11 @@
           <label for="password">Password:</label>
           <input type="password" name="password" id="password" placeholder="Enter password" required>
         </div>
-        <button type="submit">Sign Up</button>
+        <button type="submit" class="button">Sign Up</button>
       </form>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          <ul class="flashes">
+          <ul class="flashes" style="text-align: center; margin-top: 20px;">
           {% for category, message in messages %}
             <li class="{{ category }}">{{ message }}</li>
           {% endfor %}
@@ -43,6 +48,6 @@
         {% endif %}
       {% endwith %}
     </div>
-  </div>
+  </main>
 </body>
 </html>
