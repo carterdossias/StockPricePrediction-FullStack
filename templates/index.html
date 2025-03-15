@@ -16,6 +16,7 @@
     <nav>
       <a href="/">Home</a>
       <a href="/about">About</a>
+      <a href="{{ url_for('watchlist') }}">Watchlist</a>
       <a href="/stockview">Stock View</a>
       <a href="/admin">Admin</a>
       {% if session.get('user_id') %}
@@ -77,10 +78,24 @@
       </div>
       {% endif %}
     </div>
+    
+    {% if session.get('user_id') and watchlist %}
+    <div class="card">
+      <h2>Your Watchlist</h2>
+      <ul>
+        {% for item in watchlist %}
+          <li>{{ item.ticker }}{% if item.notes %} - {{ item.notes }}{% endif %} (Added: {{ item.date_added }})</li>
+        {% endfor %}
+      </ul>
+      <div class="button-container">
+        <a class="button" href="{{ url_for('watchlist') }}">View Full Watchlist</a>
+      </div>
+    </div>
+    {% endif %}
+    
   </main>
   
   <script>
-    // Handle AJAX form submission to show a spinner during processing.
     const form = document.getElementById('predictForm');
     const spinner = document.getElementById('spinner');
     const resultArea = document.getElementById('resultArea');

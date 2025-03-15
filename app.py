@@ -101,6 +101,7 @@ def signin():
             if user and bcrypt.checkpw(password, user['password_hash'].encode('utf-8')):
                 session['user_id'] = user['user_id']
                 session['username'] = user['username']
+                # Update last login timestamp
                 update_query = "UPDATE users SET last_login = NOW() WHERE user_id = %s"
                 cursor.execute(update_query, (user['user_id'],))
                 conn.commit()
@@ -205,6 +206,8 @@ def create_plot(historical_df, target_date, predicted_price=None, actual_price=N
 @basic_auth.required
 def admin():
     return render_template('admin.html')
+
+
 
 @app.route('/admin/import_ticker', methods=['GET', 'POST'])
 @basic_auth.required
@@ -320,13 +323,136 @@ def admin_sentiment():
             message = "Please enter a ticker symbol."
     return render_template('admin_sentiment.html', message=message)
 
-# ----------------- Other Routes -----------------
+@app.route('/admin/tickers', methods=['GET'])
+@basic_auth.required
+def admin_tickers():
+    """
+    Displays a table of all tickers in the database.
+    """
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT symbol, active, date_added, last_update FROM tickers ORDER BY symbol;")
+    tickers_data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return render_template('admin_tickers.html', tickers=tickers_data)
 
+@app.route('/admin/tickers/toggle', methods=['POST'])
+@basic_auth.required
+def toggle_ticker_active():
+    """
+    Toggles or sets the active state for a given ticker.
+    """
+    symbol = request.form.get('symbol', '').strip().upper()
+    new_active = request.form.get('new_active', '1')
+    if not symbol:
+        flash("No ticker symbol provided.", "danger")
+        return redirect(url_for('admin_tickers'))
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    update_query = """
+        UPDATE tickers
+        SET active = %s
+        WHERE symbol = %s
+    """
+    cursor.execute(update_query, (new_active, symbol))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash(f"Ticker '{symbol}' active state updated to {new_active}.", "success")
+    return redirect(url_for('admin_tickers'))
+
+
+@app.route('/watchlist', methods=['GET', 'POST'])
+def watchlist():
+    # Ensure user is logged in
+    if not session.get('user_id'):
+        flash("Please sign in to view your watchlist.", "danger")
+        return redirect(url_for('signin'))
+
+    user_id = session['user_id']
+
+    # If POST, handle adding new stock to watchlist
+    if request.method == 'POST':
+        ticker = request.form.get('ticker', '').upper().strip()
+        notes = request.form.get('notes', '').strip()
+        alert_threshold = request.form.get('alert_threshold', '').strip()
+
+        # Convert alert_threshold to float if provided
+        if alert_threshold == '':
+            alert_threshold = None
+        else:
+            try:
+                alert_threshold = float(alert_threshold)
+            except ValueError:
+                alert_threshold = None
+
+        try:
+            conn = mysql.connector.connect(**db_config)
+            cursor = conn.cursor()
+            insert_query = """
+                INSERT INTO user_watchlist (user_id, symbol, notes, alert_threshold)
+                VALUES (%s, %s, %s, %s)
+            """
+            cursor.execute(insert_query, (user_id, ticker, notes, alert_threshold))
+            conn.commit()
+            flash(f"{ticker} added to your watchlist.", "success")
+        except mysql.connector.Error as err:
+            flash(f"Database error: {err}", "danger")
+        finally:
+            cursor.close()
+            conn.close()
+
+        return redirect(url_for('watchlist'))
+
+    # For GET, fetch the user's watchlist and their recent news
+    watchlist_items = []
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # 1) Fetch the watchlist items for the current user
+        select_query = """
+            SELECT watchlist_id, symbol, notes, alert_threshold, date_added, stock_active
+            FROM user_watchlist
+            WHERE user_id = %s
+            ORDER BY date_added DESC
+        """
+        cursor.execute(select_query, (user_id,))
+        watchlist_items = cursor.fetchall()
+
+        # 2) For each watchlist item, fetch up to 3 recent news articles
+        for item in watchlist_items:
+            ticker_symbol = item['symbol'].upper().strip()
+            news_table = f"{ticker_symbol}_news"  # e.g., "AAPL_news"
+
+            try:
+                news_query = f"""
+                    SELECT headline, sentiment_label, date_time
+                    FROM {news_table}
+                    ORDER BY date_time DESC
+                    LIMIT 3;
+                """
+                cursor.execute(news_query)
+                recent_news = cursor.fetchall()
+                item['recent_news'] = recent_news
+            except mysql.connector.Error:
+                # If table doesn't exist or there's an error, just set an empty list
+                item['recent_news'] = []
+
+    except mysql.connector.Error as err:
+        flash(f"Database error: {err}", "danger")
+    finally:
+        cursor.close()
+        conn.close()
+
+    return render_template('watchlist.html', watchlist=watchlist_items)
+# ----------------- Stock View & Main Routes -----------------
 
 @app.route('/about')
 def about():
     return render_template('about.html')
-
 @app.route('/stockview', methods=['GET', 'POST'])
 def stock_view():
     if request.method == 'POST':
@@ -367,24 +493,69 @@ def stock_view():
         return render_template('stockview.html', ticker=ticker, plot_png=plot_png, days=days)
     return render_template('stockview.html')
 
+@app.route('/watchlist/remove', methods=['POST'])
+def remove_watchlist_item():
+    # Ensure the user is logged in
+    if not session.get('user_id'):
+        flash("Please sign in to manage your watchlist.", "danger")
+        return redirect(url_for('signin'))
+
+    watchlist_id = request.form.get('watchlist_id', '').strip()
+    if not watchlist_id:
+        flash("No watchlist item specified.", "danger")
+        return redirect(url_for('watchlist'))
+
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+        # Only remove an item that belongs to the logged-in user.
+        delete_query = """
+            DELETE FROM user_watchlist
+            WHERE watchlist_id = %s AND user_id = %s
+        """
+        cursor.execute(delete_query, (watchlist_id, session['user_id']))
+        conn.commit()
+        flash("Item removed from your watchlist.", "success")
+    except mysql.connector.Error as err:
+        flash(f"Error removing item: {err}", "danger")
+    finally:
+        cursor.close()
+        conn.close()
+    return redirect(url_for('watchlist'))
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    watchlist = None
+    if session.get('user_id'):
+        # Query the watchlist table for the current user
+        try:
+            conn = mysql.connector.connect(**db_config)
+            cursor = conn.cursor(dictionary=True)
+            query = "SELECT ticker, notes, alert_threshold, date_added FROM watchlist WHERE user_id = %s ORDER BY date_added DESC"
+            cursor.execute(query, (session['user_id'],))
+            watchlist = cursor.fetchall()
+        except Exception as e:
+            flash(f"Error fetching watchlist: {e}", "danger")
+        finally:
+            cursor.close()
+            conn.close()
+            
     if request.method == 'POST':
         ticker = request.form.get('ticker', '').strip().upper()
         date_str = request.form.get('date', '').strip()
         if not ticker or not date_str:
-            return render_template('index.html', error="Please enter both ticker and date.")
+            return render_template('index.html', error="Please enter both ticker and date.", watchlist=watchlist)
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d')
         except ValueError:
-            return render_template('index.html', error="Invalid date format. Use YYYY-MM-DD.")
+            return render_template('index.html', error="Invalid date format. Use YYYY-MM-DD.", watchlist=watchlist)
         try:
             model, scaler, look_back = load_model_and_objects(ticker)
         except Exception as e:
-            return render_template('index.html', error=f"Could not load model for {ticker}: {e}")
+            return render_template('index.html', error=f"Could not load model for {ticker}: {e}", watchlist=watchlist)
         historical_df = fetch_historical_data(ticker)
         if historical_df.empty:
-            return render_template('index.html', error=f"No historical data found for {ticker}.")
+            return render_template('index.html', error=f"No historical data found for {ticker}.", watchlist=watchlist)
         today = datetime.today()
         if target_date > historical_df['date'].iloc[-1]:
             last_date = historical_df['date'].iloc[-1]
@@ -395,7 +566,7 @@ def index():
         else:
             subset_df = historical_df[historical_df['date'] < target_date]
             if subset_df.empty:
-                return render_template('index.html', error=f"No historical data available before {target_date.strftime('%Y-%m-%d')}.")
+                return render_template('index.html', error=f"No historical data available before {target_date.strftime('%Y-%m-%d')}.", watchlist=watchlist)
             last_date = subset_df['date'].iloc[-1]
             steps_ahead = (target_date.date() - last_date.date()).days
             if steps_ahead < 1:
@@ -416,10 +587,10 @@ def index():
             predicted_price=predicted_price,
             actual_price=actual_price,
             actual_msg=actual_msg,
-            plot_png=plot_png
+            plot_png=plot_png,
+            watchlist=watchlist
         )
-    return render_template('index.html')
-
+    return render_template('index.html', watchlist=watchlist)
 if __name__ == '__main__':
     print("Starting Flask server...")
     app.run(debug=True, host='0.0.0.0', port=7979)

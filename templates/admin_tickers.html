@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Portal - Tickers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Link to external CSS file -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Google Font for a modern look -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Additional styling for the ticker table */
+    .ticker-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 1em;
+      background: #2a2d3f;
+    }
+    .ticker-table th, .ticker-table td {
+      border: 1px solid #444;
+      padding: 12px 15px;
+      text-align: left;
+    }
+    .ticker-table thead {
+      background: #1f2235;
+    }
+    .ticker-table th {
+      color: #fff;
+      font-weight: 600;
+    }
+    .ticker-table tbody tr:nth-child(even) {
+      background: #363a52;
+    }
+    .ticker-table tbody tr:hover {
+      background: #4fc3f7;
+      color: #000;
+      transition: background 0.3s;
+    }
+    /* Make the toggle button a bit smaller */
+    .toggle-btn {
+      padding: 6px 12px;
+      font-size: 0.85em;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="logo">Trading Dashboard</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/stockview">Stock View</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="container">
+    <div class="card">
+      <h1>Admin Portal - Tickers</h1>
+      <p>
+        Below is a list of all tickers currently tracked by the system. 
+        You can see their status, date added, and last update date. 
+        Use the other admin features to import new tickers, manually update existing tickers, or run sentiment analysis.
+      </p>
+      
+      <!-- Table of Tickers -->
+      <table class="ticker-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Active</th>
+            <th>Date Added</th>
+            <th>Last Update</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tickers %}
+          <tr>
+            <td>{{ row.symbol }}</td>
+            <td>{{ row.active }}</td>
+            <td>{{ row.date_added }}</td>
+            <td>{{ row.last_update }}</td>
+            <td>
+              <!-- Small form to toggle active state -->
+              <form method="POST" action="{{ url_for('toggle_ticker_active') }}" style="display:inline;">
+                <!-- Hidden inputs for symbol and new active value -->
+                <input type="hidden" name="symbol" value="{{ row.symbol }}">
+                <!-- If row.active == 1, we set new_active to 0 (Deactivate). Otherwise set it to 1 (Activate). -->
+                <input type="hidden" name="new_active" value="{{ 0 if row.active == 1 else 1 }}">
+                <!-- Button text changes based on current state -->
+                <button type="submit" class="button toggle-btn">
+                  {% if row.active == 1 %}Deactivate{% else %}Activate{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      
+      <!-- Buttons to navigate -->
+      <div class="button-container" style="text-align: center; margin-top: 20px;">
+        <a class="button" href="{{ url_for('manual_update') }}">Manual Update</a>
+        <a class="button" href="{{ url_for('admin') }}">Back to Admin Portal</a>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+      </div>
+    </div>
+  </main>
+</body>
+</html>
