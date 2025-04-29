@@ -27,7 +27,7 @@ fetch_query = f"""
     SELECT news_id, summary
     FROM {ticker}_news
     WHERE sentiment IS NULL
-    LIMIT 10000;
+    LIMIT 15000;
 """
 cursor_fetch.execute(fetch_query)
 rows = cursor_fetch.fetchall()
