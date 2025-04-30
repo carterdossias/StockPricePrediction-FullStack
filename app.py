@@ -38,7 +38,7 @@ app.secret_key = "replace_with_a_secret_key"  # Replace with a secure key
 
 # Configure Basic Auth for admin routes
 app.config['BASIC_AUTH_USERNAME'] = 'admin'
-app.config['BASIC_AUTH_PASSWORD'] = 'admin'  # Change to a secure password
+app.config['BASIC_AUTH_PASSWORD'] = 'awesomepassword'  # Change to a secure password
 app.config['BASIC_AUTH_FORCE'] = False
 basic_auth = BasicAuth(app)
 
@@ -462,6 +462,8 @@ def stock_view():
         ticker = request.form.get('ticker', '').upper().strip()
         if not ticker:
             return render_template('stockview.html', error="Please enter a ticker.")
+        
+        # parse days
         days_input = request.form.get('days', '').strip()
         try:
             days = int(days_input)
@@ -469,17 +471,32 @@ def stock_view():
                 raise ValueError("Days must be positive.")
         except Exception:
             days = 30
-        query = f"CALL SelectFromTimeFrame('{ticker}', {days});"
+
+        # OPTION A: single‐statement SELECT over last `days` days
+        query = f"""
+            SELECT date, close
+            FROM {ticker}_data
+            WHERE date >= DATE_SUB(CURDATE(), INTERVAL {days} DAY)
+            ORDER BY date ASC;
+        """
+
         try:
             conn = mysql.connector.connect(**db_config)
             df = pd.read_sql(query, conn)
             conn.close()
         except Exception as e:
-            return render_template('stockview.html', error=f"Error fetching data for {ticker}: {e}")
+            return render_template('stockview.html',
+                                   error=f"Error fetching data for {ticker}: {e}")
+
         if df.empty:
-            return render_template('stockview.html', error=f"No data available for {ticker} in the last {days} days.")
+            return render_template('stockview.html',
+                                   error=f"No data available for {ticker} in the last {days} days.")
+
+        # ensure date column is datetime
         if not pd.api.types.is_datetime64_any_dtype(df['date']):
             df['date'] = pd.to_datetime(df['date'])
+
+        # build plot
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.plot(df['date'], df['close'], marker='o', label="Close Price")
         ax.set_title(f"{ticker} Stock Data (Last {days} Days)")
@@ -488,12 +505,19 @@ def stock_view():
         ax.legend()
         ax.grid(True)
         fig.tight_layout()
+
+        # encode as base64
         buf = BytesIO()
         fig.savefig(buf, format='png')
         buf.seek(0)
         plot_png = base64.b64encode(buf.read()).decode('utf-8')
         plt.close(fig)
-        return render_template('stockview.html', ticker=ticker, plot_png=plot_png, days=days)
+
+        return render_template('stockview.html',
+                               ticker=ticker,
+                               plot_png=plot_png,
+                               days=days)
+
     return render_template('stockview.html')
 
 @app.route('/watchlist/remove', methods=['POST'])
