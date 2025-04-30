@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Trading Dashboard - Stock Price Prediction</title>
+  <title>Trading Dashboard – 5-Day Forecast</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Link to external CSS file -->
+  <!-- Link to your existing CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <!-- Google Font for a modern look -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -29,96 +28,91 @@
     </nav>
   </header>
 
-  <!-- Main Content Area -->
+  <!-- Main Container -->
   <main class="container">
-    <h1>Stock Price Prediction</h1>
-    
+    <h1>5-Day Stock Price Forecast</h1>
+
     {% if error %}
       <div class="error">{{ error }}</div>
     {% endif %}
-    
+
+    <!-- Prediction Form -->
     <div class="card">
-      <form id="predictForm" method="POST">
+      <form id="predictForm" method="POST" action="/">
         <div class="form-group">
           <label for="ticker">Ticker:</label>
           <input type="text" name="ticker" id="ticker" placeholder="e.g., AAPL" required />
         </div>
-        <div class="form-group">
-          <label for="date">Target Date (YYYY-MM-DD):</label>
-          <input type="text" name="date" id="date" placeholder="e.g., 2025-03-01" required />
-        </div>
-        <button type="submit">Predict</button>
+        <button type="submit">Forecast Next 5 Days</button>
       </form>
     </div>
-    
-    <!-- Spinner for processing -->
+
+    <!-- Spinner while loading -->
     <div class="spinner" id="spinner"></div>
-    
+
+    <!-- Result Area -->
     <div id="resultArea">
-      {% if predicted_price %}
-      <div class="card result">
-        <p>
-          Predicted closing price for <strong>{{ ticker }}</strong> on 
-          <strong>{{ date_str }}</strong>:
-          <span class="predicted">${{ "%.2f"|format(predicted_price) }}</span>
-        </p>
-        {% if actual_price is not none %}
-        <p>
-          Actual closing price for <strong>{{ ticker }}</strong> on 
-          <strong>{{ date_str }}</strong>:
-          <span class="actual">${{ "%.2f"|format(actual_price) }}</span>
-        </p>
-        {% endif %}
-        {% if actual_msg %}
-          <p class="error">{{ actual_msg }}</p>
-        {% endif %}
-        <div class="chart">
-          <img src="data:image/png;base64,{{ plot_png }}" alt="Stock Price Prediction Plot" />
+      {% if plot_png %}
+        <div class="card result">
+          <div class="chart">
+            <img src="data:image/png;base64,{{ plot_png }}" alt="5-Day Forecast Chart" />
+          </div>
+
+          {% if forecasted_prices %}
+            <h3>Forecasted Closing Prices:</h3>
+            <ul>
+              {% for price in forecasted_prices %}
+                <li>${{ "%.2f"|format(price) }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         </div>
-      </div>
       {% endif %}
     </div>
-    
+
+    <!-- Watchlist Section -->
     {% if session.get('user_id') and watchlist %}
-    <div class="card">
-      <h2>Your Watchlist</h2>
-      <ul>
-        {% for item in watchlist %}
-          <li>{{ item.ticker }}{% if item.notes %} - {{ item.notes }}{% endif %} (Added: {{ item.date_added }})</li>
-        {% endfor %}
-      </ul>
-      <div class="button-container">
-        <a class="button" href="{{ url_for('watchlist') }}">View Full Watchlist</a>
+      <div class="card">
+        <h2>Your Watchlist</h2>
+        <ul>
+          {% for item in watchlist %}
+            <li>
+              {{ item.ticker }}
+              {% if item.notes %} – {{ item.notes }}{% endif %}
+              (Added: {{ item.date_added }})
+            </li>
+          {% endfor %}
+        </ul>
+        <div class="button-container">
+          <a class="button" href="{{ url_for('watchlist') }}">View Full Watchlist</a>
+        </div>
       </div>
-    </div>
     {% endif %}
-    
   </main>
-  
+
   <script>
-    const form = document.getElementById('predictForm');
-    const spinner = document.getElementById('spinner');
-    const resultArea = document.getElementById('resultArea');
-    
-    form.addEventListener('submit', function(event) {
-      event.preventDefault();
+    const form = document.getElementById('predictForm'),
+          spinner = document.getElementById('spinner'),
+          resultArea = document.getElementById('resultArea');
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
       spinner.style.display = 'block';
       resultArea.innerHTML = '';
-      const formData = new FormData(form);
       fetch("/", {
         method: "POST",
-        body: formData
+        body: new FormData(form)
       })
-      .then(response => response.text())
+      .then(r => r.text())
       .then(html => {
         spinner.style.display = 'none';
         document.open();
         document.write(html);
         document.close();
       })
-      .catch(error => {
+      .catch(err => {
         spinner.style.display = 'none';
-        console.error("Error:", error);
+        console.error(err);
       });
     });
   </script>

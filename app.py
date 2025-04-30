@@ -18,9 +18,12 @@ import threading
 import queue
 import time
 import bcrypt
-
+from sklearn.preprocessing import MinMaxScaler
 from credentials import ipCred, usernameCred, passwordCred, databaseCred
 from ticker_import import create_new_ticker_table, import_news_data
+from prediction_engine import predict_next_5_days
+from flask import Flask, request, render_template, session
+
 
 # ----------------- DB Configuration -----------------
 db_config = {
@@ -523,74 +526,42 @@ def remove_watchlist_item():
         conn.close()
     return redirect(url_for('watchlist'))
 
-@app.route('/', methods=['GET', 'POST'])
+from datetime import datetime, timedelta
+from io import BytesIO
+
+from io import BytesIO
+import base64
+
+# app.py (only the index part shown)
+
+from prediction_engine import predict_next_5_days
+
+from prediction_engine import predict_next_5_days
+
+@app.route("/", methods=["GET", "POST"])
 def index():
-    watchlist = None
-    if session.get('user_id'):
-        # Query the watchlist table for the current user
-        try:
-            conn = mysql.connector.connect(**db_config)
-            cursor = conn.cursor(dictionary=True)
-            query = "SELECT ticker, notes, alert_threshold, date_added FROM watchlist WHERE user_id = %s ORDER BY date_added DESC"
-            cursor.execute(query, (session['user_id'],))
-            watchlist = cursor.fetchall()
-        except Exception as e:
-            flash(f"Error fetching watchlist: {e}", "danger")
-        finally:
-            cursor.close()
-            conn.close()
-            
-    if request.method == 'POST':
-        ticker = request.form.get('ticker', '').strip().upper()
-        date_str = request.form.get('date', '').strip()
-        if not ticker or not date_str:
-            return render_template('index.html', error="Please enter both ticker and date.", watchlist=watchlist)
-        try:
-            target_date = datetime.strptime(date_str, '%Y-%m-%d')
-        except ValueError:
-            return render_template('index.html', error="Invalid date format. Use YYYY-MM-DD.", watchlist=watchlist)
-        try:
-            model, scaler, look_back = load_model_and_objects(ticker)
-        except Exception as e:
-            return render_template('index.html', error=f"Could not load model for {ticker}: {e}", watchlist=watchlist)
-        historical_df = fetch_historical_data(ticker)
-        if historical_df.empty:
-            return render_template('index.html', error=f"No historical data found for {ticker}.", watchlist=watchlist)
-        today = datetime.today()
-        if target_date > historical_df['date'].iloc[-1]:
-            last_date = historical_df['date'].iloc[-1]
-            steps_ahead = (target_date.date() - last_date.date()).days
-            if steps_ahead < 1:
-                steps_ahead = 1
-            data_for_forecast = scaler.transform(historical_df[['close']].values)
+    error = None
+    ticker = None
+    plot_png = None
+    forecasted_prices = None
+
+    if request.method == "POST":
+        ticker = request.form.get("ticker", "").strip().upper()
+        if not ticker:
+            error = "Please enter a ticker."
         else:
-            subset_df = historical_df[historical_df['date'] < target_date]
-            if subset_df.empty:
-                return render_template('index.html', error=f"No historical data available before {target_date.strftime('%Y-%m-%d')}.", watchlist=watchlist)
-            last_date = subset_df['date'].iloc[-1]
-            steps_ahead = (target_date.date() - last_date.date()).days
-            if steps_ahead < 1:
-                steps_ahead = 1
-            data_for_forecast = scaler.transform(subset_df[['close']].values)
-        predicted_price = iterative_forecast(model, scaler, data_for_forecast, look_back, steps_ahead)
-        actual_price = None
-        actual_msg = None
-        if target_date.date() < today.date():
-            actual_price = get_actual_price_yfinance(ticker, target_date)
-            if actual_price is None:
-                actual_msg = "There is no closing price data for the specified day (possible weekend or holiday)."
-        plot_png = create_plot(historical_df, target_date, predicted_price, actual_price)
-        return render_template(
-            'index.html',
-            ticker=ticker,
-            date_str=date_str,
-            predicted_price=predicted_price,
-            actual_price=actual_price,
-            actual_msg=actual_msg,
-            plot_png=plot_png,
-            watchlist=watchlist
-        )
-    return render_template('index.html', watchlist=watchlist)
-if __name__ == '__main__':
-    print("Starting Flask server...")
-    app.run(debug=True, host='0.0.0.0', port=7979)
+            try:
+                plot_png, forecasted_prices = predict_next_5_days(ticker)
+            except Exception as e:
+                error = f"Prediction error: {e}"
+
+    return render_template("index.html",
+        error=error,
+        ticker=ticker,
+        plot_png=plot_png,
+        forecasted_prices=forecasted_prices,
+        watchlist=session.get("watchlist")
+    )
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=7979)
